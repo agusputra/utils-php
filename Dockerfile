@@ -56,7 +56,7 @@ RUN sh composer.sh && mv composer.phar /home/user1/bin/composer \
     && composer g require psy/psysh:@stable 
 
 RUN curl -O https://raw.githubusercontent.com/wp-cli/builds/gh-pages/phar/wp-cli.phar \
-    && sudo chmod 754 wp-cli.phar \
+    && sudo chmod 554 wp-cli.phar \
     && ln -s /home/user1/wp-cli.phar /home/user1/bin/wp \
     && wp core download --path=/var/www/html    
 
