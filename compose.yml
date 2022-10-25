@@ -1,0 +1,16 @@
+services:
+  php:
+    image: agusputra/php:${AGS_TAG:-7}
+    volumes:
+      - php:/var/www/html
+    ports:
+      - ${AGS_PORT:-5001}:80
+    networks:
+      - net1   
+
+volumes:
+  php:      
+
+networks:
+  net1:
+    external: true      
