@@ -22,12 +22,13 @@ RUN export DEBIAN_FRONTEND=noninteractive \
     php${VER}
 # && rm -rf /var/lib/apt/lists/*
 
-RUN sudo apt install -y --no-install-recommends \
+RUN apt install -y --no-install-recommends \
     nano \
     curl \
     less \
     php${VER}-xdebug \
     php${VER}-mysql \
+    && a2enmod rewrite \
     && echo 'xdebug.mode=debug' >> /etc/php/${VER}/apache2/php.ini \
     && rm /var/www/html/index.html
 
