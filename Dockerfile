@@ -42,7 +42,7 @@ RUN ln -s /etc/apache2/conf-available/custom.conf /etc/apache2/conf-enabled/cust
     && useradd --uid $USER_UID --gid $USER_GID -m $USERNAME \
     && chmod 755 /home/user1 \
     && echo $USERNAME ALL=\(root\) NOPASSWD:ALL > /etc/sudoers.d/$USERNAME \
-    && chmod 0440 /etc/sudoers.d/$USERNAME
+    && chmod 440 /etc/sudoers.d/$USERNAME
 
 USER user1
 
