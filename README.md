@@ -1,4 +1,5 @@
 ## Build
 ```
-docker build --build-arg VER=8.1 -t agusputra/php:8.1
+docker build --build-arg APP_VER=7.4 --build-arg APP_MODE=Laravel -t agusputra/php:7 .
+docker build --build-arg APP_VER=7.4 --build-arg APP_MODE=WP -t agusputra/php:7-wp .
 ```

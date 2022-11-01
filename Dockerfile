@@ -1,6 +1,7 @@
 FROM ubuntu:22.04
 
-ARG VER=7.4
+ARG APP_VER=7.4
+ARG APP_MODE=WordPress
 ARG USERNAME=user1
 ARG USER_UID=1000
 ARG USER_GID=$USER_UID
@@ -19,33 +20,33 @@ RUN export DEBIAN_FRONTEND=noninteractive \
     sudo \
     git \
     apache2 \
-    php${VER}
+    php${APP_VER}
 # && rm -rf /var/lib/apt/lists/*
 
 RUN apt install -y --no-install-recommends \
     nano \
     curl \
     less \
-    php${VER}-xdebug \
-    php${VER}-mysql \
+    php${APP_VER}-xdebug \
+    php${APP_VER}-mysql \
+    php${APP_VER}-xml \
+    php${APP_VER}-curl \
     && a2enmod rewrite \
-    && echo 'xdebug.mode=debug' >> /etc/php/${VER}/apache2/php.ini \
+    && echo 'xdebug.mode=debug' >> /etc/php/${APP_VER}/apache2/php.ini \
     && rm /var/www/html/index.html
 
-COPY setup/apache.conf /etc/apache2/conf-enabled/custom.conf   
+COPY setup/apache.conf /etc/apache2/conf-available/custom.conf
 
-RUN chown -R www-data:www-data /var/www/html
-
-RUN groupadd --gid $USER_GID $USERNAME \
+RUN ln -s /etc/apache2/conf-available/custom.conf /etc/apache2/conf-enabled/custom.conf \
+    && groupadd --gid $USER_GID $USERNAME \
     && useradd --uid $USER_UID --gid $USER_GID -m $USERNAME \
-    && usermod -a -G www-data user1 \
-    && chmod 775 /var/www/html \
+    && chmod 755 /home/user1 \
     && echo $USERNAME ALL=\(root\) NOPASSWD:ALL > /etc/sudoers.d/$USERNAME \
-    && chmod 0440 /etc/sudoers.d/$USERNAME    
+    && chmod 0440 /etc/sudoers.d/$USERNAME
 
-USER user1    
+USER user1
 
-RUN mkdir /home/user1/bin   
+RUN mkdir /home/user1/bin && mkdir /home/user1/code
 
 COPY --chown=user1:user1 setup/composer.sh /home/user1
 
@@ -56,14 +57,23 @@ ENV PATH=$PATH:/home/user1/bin:/home/user1/.config/composer/vendor/bin
 RUN sh composer.sh && mv composer.phar /home/user1/bin/composer \
     && composer g require psy/psysh:@stable 
 
-RUN curl -O https://raw.githubusercontent.com/wp-cli/builds/gh-pages/phar/wp-cli.phar \
+RUN if test $(echo "${APP_MODE}" | tr '[:upper:]' '[:lower:]') = "laravel" ;\
+    then \
+    curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.2/install.sh | bash \
+    && sudo rm -d /var/www/html \
+    && sudo ln -s /home/user1/code/public/ /var/www/html \
+    && mkdir /home/user1/code/public \
+    && echo '<?php phpinfo();' > /home/user1/code/public/index.php ;\
+    else \
+    curl -O https://raw.githubusercontent.com/wp-cli/builds/gh-pages/phar/wp-cli.phar \
     && sudo chmod 554 wp-cli.phar \
     && ln -s /home/user1/wp-cli.phar /home/user1/bin/wp \
-    && wp core download --path=/var/www/html    
+    && wp core download --path=/home/user1/code \
+    && sudo rm -d /var/www/html \
+    && sudo ln -s /home/user1/code/ /var/www/html ;\
+    fi
 
-RUN git clone --depth 1 https://github.com/vrana/adminer /var/www/html/adminer
-
-COPY --chown=user1:www-data html/* /var/www/html/temp/
+# RUN git clone --depth 1 https://github.com/vrana/adminer /var/www/html/adminer
 
 EXPOSE 80    
 
