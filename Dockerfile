@@ -31,6 +31,9 @@ RUN apt install -y --no-install-recommends \
     php${APP_VER}-mysql \
     php${APP_VER}-xml \
     php${APP_VER}-curl \
+    php${APP_VER}-gd \
+    php${APP_VER}-zip \
+    php${APP_VER}-mbstring \
     && a2enmod rewrite \
     && echo 'xdebug.mode=debug' >> /etc/php/${APP_VER}/apache2/php.ini \
     && rm /var/www/html/index.html
@@ -59,7 +62,9 @@ RUN sh composer.sh && mv composer.phar /home/user1/bin/composer \
 
 RUN if test $(echo "${APP_MODE}" | tr '[:upper:]' '[:lower:]') = "laravel" ;\
     then \
-    curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.2/install.sh | bash \
+    sudo apt install -y --no-install-recommends \
+    php${APP_VER}-sqlite3 \
+    && curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.2/install.sh | bash \
     && sudo rm -d /var/www/html \
     && sudo ln -s /home/user1/code/public/ /var/www/html \
     && mkdir /home/user1/code/public \
