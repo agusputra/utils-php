@@ -43,7 +43,7 @@ COPY setup/apache.conf /etc/apache2/conf-available/custom.conf
 RUN ln -s /etc/apache2/conf-available/custom.conf /etc/apache2/conf-enabled/custom.conf \
     && groupadd --gid $USER_GID $USERNAME \
     && useradd --uid $USER_UID --gid $USER_GID -m $USERNAME \
-    && chmod 755 /home/user1 \
+    && chmod 751 /home/user1 \
     && echo $USERNAME ALL=\(root\) NOPASSWD:ALL > /etc/sudoers.d/$USERNAME \
     && chmod 440 /etc/sudoers.d/$USERNAME
 
@@ -55,16 +55,17 @@ COPY --chown=user1:user1 setup/composer.sh /home/user1
 
 WORKDIR /home/user1
 
-ENV PATH=$PATH:/home/user1/bin:/home/user1/.config/composer/vendor/bin
+ENV PATH=/home/user1/bin:/home/user1/.config/composer/vendor/bin:$PATH
 
 RUN sh composer.sh && mv composer.phar /home/user1/bin/composer \
-    && composer g require psy/psysh:@stable 
+    && composer g require psy/psysh:@stable \
+    && curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.2/install.sh | bash \
+    && echo "\n[ -s ~/.nvm/nvm.sh ] && source ~/.nvm/nvm.sh" >> .bashrc
 
 RUN if test $(echo "${APP_MODE}" | tr '[:upper:]' '[:lower:]') = "laravel" ;\
     then \
     sudo apt install -y --no-install-recommends \
     php${APP_VER}-sqlite3 \
-    && curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.2/install.sh | bash \
     && sudo rm -d /var/www/html \
     && sudo ln -s /home/user1/code/public/ /var/www/html \
     && mkdir /home/user1/code/public \
