@@ -6,7 +6,7 @@ ARG USERNAME=user1
 ARG USER_UID=1000
 ARG USER_GID=$USER_UID
 
-# Instead of using ARG we are using export because user don't need to set the environment vars
+# Instead of using ARG we use export because user don't need to set the environment vars
 RUN export DEBIAN_FRONTEND=noninteractive \
     && export C_ALL=C.UTF-8 \
     && apt update \
@@ -72,12 +72,14 @@ RUN if test $(echo "${APP_MODE}" | tr '[:upper:]' '[:lower:]') = "laravel" ;\
     && echo '<?php phpinfo();' > /home/user1/code/public/index.php ;\
     else \
     curl -O https://raw.githubusercontent.com/wp-cli/builds/gh-pages/phar/wp-cli.phar \
-    && sudo chmod 554 wp-cli.phar \
+    && chmod 550 wp-cli.phar \
     && ln -s /home/user1/wp-cli.phar /home/user1/bin/wp \
     && wp core download --path=/home/user1/code \
     && sudo rm -d /var/www/html \
     && sudo ln -s /home/user1/code/ /var/www/html ;\
-    fi
+    fi \
+    && sudo chown -R user1:www-data /home/user1/code \
+    && sudo chmod -R 775 /home/user1/code
 
 # RUN git clone --depth 1 https://github.com/vrana/adminer /var/www/html/adminer
 
