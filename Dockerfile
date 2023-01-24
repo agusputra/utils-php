@@ -1,14 +1,18 @@
 FROM ubuntu:22.04
 
+LABEL maintainer="Agus Syahputra"
+
 ARG APP_VER=7.4
 ARG APP_MODE=WordPress
 ARG USERNAME=user1
 ARG USER_UID=1000
 ARG USER_GID=$USER_UID
 
-# Instead of using ARG we use export because user don't need to set the environment vars
+ENV C_ALL=C.UTF-8
+
+# Instead of using ARG we use export because user don't need to set the environment vars.
+# We set the env inline (using export) instead of ENV because we don't need to persist it after build.
 RUN export DEBIAN_FRONTEND=noninteractive \
-    && export C_ALL=C.UTF-8 \
     && apt update \
     && apt install -y --no-install-recommends \
     language-pack-en-base \
@@ -43,6 +47,7 @@ COPY setup/apache.conf /etc/apache2/conf-available/custom.conf
 RUN ln -s /etc/apache2/conf-available/custom.conf /etc/apache2/conf-enabled/custom.conf \
     && groupadd --gid $USER_GID $USERNAME \
     && useradd --uid $USER_UID --gid $USER_GID -m $USERNAME \
+    # Make home access more restrictive (default 755). Let o+x for Apache to be able to access it.
     && chmod 751 /home/user1 \
     && echo $USERNAME ALL=\(root\) NOPASSWD:ALL > /etc/sudoers.d/$USERNAME \
     && chmod 440 /etc/sudoers.d/$USERNAME
