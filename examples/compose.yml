@@ -1,0 +1,10 @@
+name: app-tmp
+services:
+  app:
+    image: agusputra/php:7.4
+    volumes:
+      - .:/home/user1/code
+    command: /bin/bash -c "cd /home/user1/code && ./start-container"
+    ports:
+      - 8080:80
+      - 6001:6001

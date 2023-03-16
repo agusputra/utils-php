@@ -1,0 +1,17 @@
+#!/bin/sh
+
+source /home/user1/.profile
+
+cd /home/user1/code
+
+composer install
+
+nvm install node && npm install && npm run prod
+
+mkdir log
+
+sudo supervisord -c /etc/supervisor/supervisord.conf &
+
+tail -f log/laravel*.log &
+
+sudo service apache2 start && sudo tail -f /var/log/apache2/access.log

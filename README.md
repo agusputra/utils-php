@@ -14,3 +14,8 @@ docker run --name wp -v wp:/home/user1/code -p 7001:80 -d agusputra/php:8.2-wp
 
 docker run --rm -it -v ${PWD}/code:/home/user1/code agusputra/php:8.2 composer create-project laravel/laravel code
 ```
+
+## Run supervisor
+```
+supervisord -c /etc/supervisor/conf.d/supervisord.conf
+```

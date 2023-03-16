@@ -42,7 +42,7 @@ RUN apt install -y --no-install-recommends \
     && echo 'xdebug.mode=debug' >> /etc/php/${APP_VER}/apache2/php.ini \
     && rm /var/www/html/index.html
 
-COPY setup/apache.conf /etc/apache2/conf-available/custom.conf
+COPY files/apache.conf /etc/apache2/conf-available/custom.conf
 
 RUN ln -s /etc/apache2/conf-available/custom.conf /etc/apache2/conf-enabled/custom.conf \
     && groupadd --gid $USER_GID $USERNAME \
@@ -56,7 +56,7 @@ USER user1
 
 RUN mkdir /home/user1/bin && mkdir /home/user1/code
 
-COPY --chown=user1:user1 setup/composer.sh /home/user1
+COPY --chown=user1:user1 files/composer.sh /home/user1
 
 WORKDIR /home/user1
 
@@ -71,6 +71,7 @@ RUN if test $(echo "${APP_MODE}" | tr '[:upper:]' '[:lower:]') = "laravel" ;\
     then \
     sudo apt install -y --no-install-recommends \
     php${APP_VER}-sqlite3 \
+    supervisor \
     && sudo rm -d /var/www/html \
     && sudo ln -s /home/user1/code/public/ /var/www/html \
     && mkdir /home/user1/code/public \
@@ -87,6 +88,9 @@ RUN if test $(echo "${APP_MODE}" | tr '[:upper:]' '[:lower:]') = "laravel" ;\
     && sudo chmod -R 775 /home/user1/code
 
 # RUN git clone --depth 1 https://github.com/vrana/adminer /var/www/html/adminer
+
+COPY files/supervisord.conf /etc/supervisor/conf.d/supervisord.conf
+COPY --chown=user1:user1 --chmod=775 files/start-container /home/user1/bin/start-container
 
 EXPOSE 80    
 
