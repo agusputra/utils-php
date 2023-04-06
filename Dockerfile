@@ -2,7 +2,7 @@ FROM ubuntu:22.04
 
 LABEL maintainer="Agus Syahputra"
 
-ARG APP_VER=7.4
+ARG PHP_VER=7.4
 ARG APP_MODE=WordPress
 ARG USERNAME=user1
 ARG USER_UID=1000
@@ -24,22 +24,25 @@ RUN export DEBIAN_FRONTEND=noninteractive \
     sudo \
     git \
     apache2 \
-    php${APP_VER}
-# && rm -rf /var/lib/apt/lists/*
+    php${PHP_VER}
 
 RUN apt install -y --no-install-recommends \
     nano \
     curl \
     less \
-    php${APP_VER}-xdebug \
-    php${APP_VER}-mysql \
-    php${APP_VER}-xml \
-    php${APP_VER}-curl \
-    php${APP_VER}-gd \
-    php${APP_VER}-zip \
-    php${APP_VER}-mbstring \
+    net-tools \
+    dnsutils \
+    iputils-ping \
+    traceroute \
+    php${PHP_VER}-xdebug \
+    php${PHP_VER}-mysql \
+    php${PHP_VER}-xml \
+    php${PHP_VER}-curl \
+    php${PHP_VER}-gd \
+    php${PHP_VER}-zip \
+    php${PHP_VER}-mbstring \
     && a2enmod rewrite \
-    && echo 'xdebug.mode=debug' >> /etc/php/${APP_VER}/apache2/php.ini \
+    && echo "\nxdebug.mode=debug" >> /etc/php/${PHP_VER}/apache2/php.ini \
     && rm /var/www/html/index.html
 
 COPY files/apache.conf /etc/apache2/conf-available/custom.conf
@@ -70,14 +73,16 @@ RUN sh composer.sh && mv composer.phar /home/user1/bin/composer \
 RUN if test $(echo "${APP_MODE}" | tr '[:upper:]' '[:lower:]') = "laravel" ;\
     then \
     sudo apt install -y --no-install-recommends \
-    php${APP_VER}-sqlite3 \
+    php${PHP_VER}-sqlite3 \
     supervisor \
     && sudo rm -d /var/www/html \
     && sudo ln -s /home/user1/code/public/ /var/www/html \
     && mkdir /home/user1/code/public \
     && echo '<?php phpinfo();' > /home/user1/code/public/index.php ;\
     else \
-    curl -O https://raw.githubusercontent.com/wp-cli/builds/gh-pages/phar/wp-cli.phar \
+    sudo apt install -y --no-install-recommends \
+    php${PHP_VER}-soap \
+    && curl -O https://raw.githubusercontent.com/wp-cli/builds/gh-pages/phar/wp-cli.phar \
     && chmod 550 wp-cli.phar \
     && ln -s /home/user1/wp-cli.phar /home/user1/bin/wp \
     && wp core download --path=/home/user1/code \
@@ -85,12 +90,12 @@ RUN if test $(echo "${APP_MODE}" | tr '[:upper:]' '[:lower:]') = "laravel" ;\
     && sudo ln -s /home/user1/code/ /var/www/html ;\
     fi \
     && sudo chown -R user1:www-data /home/user1/code \
-    && sudo chmod -R 775 /home/user1/code
+    && sudo chmod -R 775 /home/user1/code \
+    && sudo rm -rf /var/lib/apt/lists/*
 
 # RUN git clone --depth 1 https://github.com/vrana/adminer /var/www/html/adminer
 
 COPY files/supervisord.conf /etc/supervisor/conf.d/supervisord.conf
-COPY --chown=user1:user1 --chmod=775 files/start-container /home/user1/bin/start-container
 
 EXPOSE 80    
 
