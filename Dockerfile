@@ -13,8 +13,7 @@ ENV C_ALL=C.UTF-8
 # Instead of using ARG we use export because user don't need to set the environment vars.
 # We set the env inline (using export) instead of ENV because we don't need to persist it after build.
 RUN export DEBIAN_FRONTEND=noninteractive \
-    && apt update \
-    && apt install -y --no-install-recommends \
+    && apt update && apt install -y --no-install-recommends \
     language-pack-en-base \
     software-properties-common \
     gpg-agent \
@@ -24,9 +23,10 @@ RUN export DEBIAN_FRONTEND=noninteractive \
     sudo \
     git \
     apache2 \
-    php${PHP_VER}
+    php${PHP_VER} \
+    && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
-RUN apt install -y --no-install-recommends \
+RUN apt update && apt install -y --no-install-recommends \
     nano \
     curl \
     less \
@@ -42,13 +42,10 @@ RUN apt install -y --no-install-recommends \
     php${PHP_VER}-zip \
     php${PHP_VER}-mbstring \
     && a2enmod rewrite \
-    && echo "\nxdebug.mode=debug" >> /etc/php/${PHP_VER}/apache2/php.ini \
-    && rm /var/www/html/index.html
+    && rm /var/www/html/index.html \
+    && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
-COPY files/apache.conf /etc/apache2/conf-available/custom.conf
-
-RUN ln -s /etc/apache2/conf-available/custom.conf /etc/apache2/conf-enabled/custom.conf \
-    && groupadd --gid $USER_GID $USERNAME \
+RUN groupadd --gid $USER_GID $USERNAME \
     && useradd --uid $USER_UID --gid $USER_GID -m $USERNAME \
     # Make home access more restrictive (default 755). Let o+x for Apache to be able to access it.
     && chmod 751 /home/user1 \
@@ -59,20 +56,23 @@ USER user1
 
 RUN mkdir /home/user1/bin && mkdir /home/user1/code
 
-COPY --chown=user1:user1 files/composer.sh /home/user1
-
 WORKDIR /home/user1
 
 ENV PATH=/home/user1/bin:/home/user1/.config/composer/vendor/bin:$PATH
 
-RUN sh composer.sh && mv composer.phar /home/user1/bin/composer \
+RUN php -r "copy('https://getcomposer.org/installer', 'composer-setup.php');" \
+    && php -r "if (hash_file('sha384', 'composer-setup.php') === 'dac665fdc30fdd8ec78b38b9800061b4150413ff2e3b6f88543c636f7cd84f6db9189d43a81e5503cda447da73c7e5b6') { echo 'Installer verified'; } else { echo 'Installer corrupt'; unlink('composer-setup.php'); } echo PHP_EOL;" \
+    && php composer-setup.php \
+    && mv composer.phar /home/user1/bin/composer \
+    && php -r "unlink('composer-setup.php');" \
     && composer g require psy/psysh:@stable \
-    && curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.2/install.sh | bash \
+    && curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.7/install.sh | bash \
     && echo "\n[ -s ~/.nvm/nvm.sh ] && source ~/.nvm/nvm.sh" >> .bashrc
 
 RUN if test $(echo "${APP_MODE}" | tr '[:upper:]' '[:lower:]') = "laravel" ;\
     then \
-    sudo apt install -y --no-install-recommends \
+    # LARAVEL  
+    sudo apt update && sudo apt install -y --no-install-recommends \
     php${PHP_VER}-sqlite3 \
     supervisor \
     && sudo rm -d /var/www/html \
@@ -80,7 +80,8 @@ RUN if test $(echo "${APP_MODE}" | tr '[:upper:]' '[:lower:]') = "laravel" ;\
     && mkdir /home/user1/code/public \
     && echo '<?php phpinfo();' > /home/user1/code/public/index.php ;\
     else \
-    sudo apt install -y --no-install-recommends \
+    # WORDPRESS
+    sudo apt update && sudo apt install -y --no-install-recommends \
     php${PHP_VER}-soap \
     && curl -O https://raw.githubusercontent.com/wp-cli/builds/gh-pages/phar/wp-cli.phar \
     && chmod 550 wp-cli.phar \
@@ -91,11 +92,14 @@ RUN if test $(echo "${APP_MODE}" | tr '[:upper:]' '[:lower:]') = "laravel" ;\
     fi \
     && sudo chown -R user1:www-data /home/user1/code \
     && sudo chmod -R 775 /home/user1/code \
-    && sudo rm -rf /var/lib/apt/lists/*
+    && sudo rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
 # RUN git clone --depth 1 https://github.com/vrana/adminer /var/www/html/adminer
 
+COPY files/php.ini /etc/php/${PHP_VER}/apache2/conf.d/99-custom.ini
+COPY files/apache.conf /etc/apache2/conf-available/custom.conf
 COPY files/supervisord.conf /etc/supervisor/conf.d/supervisord.conf
+RUN sudo ln -s /etc/apache2/conf-available/custom.conf /etc/apache2/conf-enabled/custom.conf
 
 EXPOSE 80    
 
