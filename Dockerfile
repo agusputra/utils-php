@@ -1,8 +1,8 @@
-FROM ubuntu:22.04
+FROM ubuntu:24.04
 
 LABEL maintainer="Agus Syahputra"
 
-ARG PHP_VER=7.4
+ARG PHP_VER=8.1
 ARG APP_MODE=WordPress
 ARG USERNAME=user1
 ARG USER_UID=1000
@@ -45,7 +45,9 @@ RUN apt update && apt install -y --no-install-recommends \
     && rm /var/www/html/index.html \
     && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
-RUN groupadd --gid $USER_GID $USERNAME \
+# For Ubuntu 24.04, the default user is "ubuntu" with UID and GID 1000. We need to remove it to avoid conflicts with our custom user.
+RUN userdel -r ubuntu 2>/dev/null || true \
+    && groupadd --gid $USER_GID $USERNAME \
     && useradd --uid $USER_UID --gid $USER_GID -m $USERNAME \
     # Make home access more restrictive (default 755). Let o+x for Apache to be able to access it.
     && chmod 751 /home/user1 \
@@ -60,13 +62,8 @@ WORKDIR /home/user1
 
 ENV PATH=/home/user1/bin:/home/user1/.config/composer/vendor/bin:$PATH
 
-RUN php -r "copy('https://getcomposer.org/installer', 'composer-setup.php');" \
-    && php -r "if (hash_file('sha384', 'composer-setup.php') === 'dac665fdc30fdd8ec78b38b9800061b4150413ff2e3b6f88543c636f7cd84f6db9189d43a81e5503cda447da73c7e5b6') { echo 'Installer verified'; } else { echo 'Installer corrupt'; unlink('composer-setup.php'); } echo PHP_EOL;" \
-    && php composer-setup.php \
-    && mv composer.phar /home/user1/bin/composer \
-    && php -r "unlink('composer-setup.php');" \
-    && composer g require psy/psysh:@stable \
-    && curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.7/install.sh | bash \
+RUN curl -sLS https://getcomposer.org/installer | php -- --install-dir=/home/user1/bin/ --filename=composer \
+    && curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.4/install.sh | bash \
     && echo "\n[ -s ~/.nvm/nvm.sh ] && source ~/.nvm/nvm.sh" >> .bashrc
 
 RUN if test $(echo "${APP_MODE}" | tr '[:upper:]' '[:lower:]') = "laravel" ;\
@@ -103,4 +100,9 @@ RUN sudo ln -s /etc/apache2/conf-available/custom.conf /etc/apache2/conf-enabled
 
 EXPOSE 80    
 
-CMD sudo service apache2 start && sudo tail -f /var/log/apache2/access.log
+# This is an anti-pattern because it runs the process in the background and then tails the logs, which is not ideal for Docker's process management and logging. 
+# It can lead to issues with signal handling and log management.
+# CMD ["/bin/sh", "-c", "sudo service apache2 start && sudo tail -f /var/log/apache2/access.log"]
+
+# The standard practice is to run the process in the foreground so Docker can monitor it directly and capture its logs natively
+CMD ["sudo", "apachectl", "-D", "FOREGROUND"]
